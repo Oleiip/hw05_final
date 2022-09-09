@@ -263,11 +263,11 @@ class TestaCache(TestCase):
 
     def setUp(self):
         self.guest_client = Client()
-        self.INDEX = reverse('posts:index') 
+        self.INDEX = reverse('posts:index')
 
     def test_cache_index(self):
         first_time = self.guest_client.get(self.INDEX)
-        post_1 = Post.objects.create(
+        Post.objects.create(
             text='Новый текст',
             author=self.user,
             group=self.group
