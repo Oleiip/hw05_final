@@ -156,5 +156,3 @@ class PostCommentForm(TestCase):
         new_post = Comment.objects.first()
         self.assertEqual(new_post.author.username, self.user.username)
         self.assertEqual(new_post.text, form_data['text'])
-
-
