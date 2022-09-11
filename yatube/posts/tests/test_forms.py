@@ -51,14 +51,11 @@ class PostCreateForm(TestCase):
             'text': 'Новый пост',
             'image': uploaded,
         }
-        response = self.authorized_client.post(
+        self.authorized_client.post(
             reverse('posts:post_create'),
             data=form_data,
             follow=True
         )
-        self.assertRedirects(
-            response,
-            reverse('posts:profile', kwargs={'username': self.user.username}))
 
         self.assertEqual(Post.objects.count(), posts_count + 1)
 
@@ -124,7 +121,6 @@ class PostCommentForm(TestCase):
             title='Тестовая группа',
             slug='test-slug',
             description='Тестовое описание',
-
         )
         cls.post = Post.objects.create(
             text='пост',
@@ -138,7 +134,7 @@ class PostCommentForm(TestCase):
         self.authorized_client.force_login(self.user)
 
     def test_comment_form(self):
-        posts_count = Comment.objects.count()
+        comment_count = Comment.objects.count()
         form_data = {
             'text': 'Тестовый коментарий',
         }
@@ -152,7 +148,7 @@ class PostCommentForm(TestCase):
             response,
             reverse('posts:post_detail',
                     kwargs={'post_id': self.post.id}))
-        self.assertEqual(Comment.objects.count(), posts_count + 1)
-        new_post = Comment.objects.first()
-        self.assertEqual(new_post.author.username, self.user.username)
-        self.assertEqual(new_post.text, form_data['text'])
+        self.assertEqual(Comment.objects.count(), comment_count + 1)
+        new_comment = Comment.objects.first()
+        self.assertEqual(new_comment.author.username, self.user.username)
+        self.assertEqual(new_comment.text, form_data['text'])

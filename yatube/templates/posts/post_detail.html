@@ -2,7 +2,6 @@
 {% block title %}Пост {{ post.text|truncatewords:30 }}{% endblock %}
 {% block content %}
 {% load thumbnail %}
-<div class="container py-5">
     <div class="row">
         <aside class="col-12 col-md-3">
           <ul class="list-group list-group-flush">
@@ -44,5 +43,4 @@
           {% include 'includes/comment.html' %}
         </article>
     </div>
-  </div>
 {% endblock %}

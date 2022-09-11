@@ -3,8 +3,7 @@
 {% block content %}
 {% load cache %}
 {% load thumbnail %}
-{% include 'includes/switcher.html' %}
-  <div class="container py-5">
+    {% include 'includes/switcher.html' %}
     {% cache 20 index_page page_obj.number %}
     <h1>Последние обновления на сайте</h1>
     {% for post in page_obj %}
@@ -33,6 +32,5 @@
     {% endif %}
     {% endfor %}
   {% include 'includes/paginator.html' %}
-  </div>
   {% endcache %}
 {% endblock %}
