@@ -94,16 +94,11 @@ class PostUpdateForm(TestCase):
             'group': PostCreateForm.group.id,
             'text': 'Обновленный текст',
         }
-        response = self.authorized_client.post(
+        self.authorized_client.post(
             reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
             data=form_data,
             follow=True
         )
-        self.assertRedirects(
-            response,
-            reverse('posts:post_detail',
-                    kwargs={'post_id': self.post.id}))
-
         new_post = Post.objects.first()
 
         self.assertEqual(new_post.author.username, self.user.username)
@@ -144,10 +139,6 @@ class PostCommentForm(TestCase):
             follow=True
         )
         self.assertEqual(response.status_code, 200)
-        self.assertRedirects(
-            response,
-            reverse('posts:post_detail',
-                    kwargs={'post_id': self.post.id}))
         self.assertEqual(Comment.objects.count(), comment_count + 1)
         new_comment = Comment.objects.first()
         self.assertEqual(new_comment.author.username, self.user.username)

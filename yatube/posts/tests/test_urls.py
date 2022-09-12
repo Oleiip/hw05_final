@@ -66,6 +66,16 @@ class StaticURLTests(TestCase):
             response,
             reverse('users:login') + "?next=" + '/create/')
 
+    def test_task_profile_follow_redirect_anonymous_on_admin_login(self):
+        response = self.guest_client.post(reverse(
+            'posts:profile_follow', kwargs={'username': self.post.author})
+        )
+        self.assertRedirects(
+            response,
+            reverse('users:login')
+            + "?next=" + f'/profile/{self.post.author}/follow/'
+        )
+
     def test_unknown_puth_return_404(self):
         response = self.guest_client.get('/unexisting_page/')
         self.assertEqual(response.status_code, 404)

@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -137,10 +138,11 @@ class TaskPagesTests(TestCase):
 
     def test_post_edit_and_post_create_page_show_correct_context(self):
         """Шаблоны с post запросом сформированы с правильным контекстом."""
-        list_views = [reverse('posts:post_create'), reverse(
-            'posts:post_edit',
-            kwargs={'post_id': self.post1.id}
-        )]
+        list_views = [
+            reverse('posts:post_create'),
+            reverse('posts:post_edit',
+                    kwargs={'post_id': self.post1.id})
+        ]
         form_fields = {
             'text': forms.fields.CharField,
             'group': forms.fields.ChoiceField,
@@ -201,7 +203,7 @@ class PaginatorViewsTest(TestCase):
                     kwargs={'username': self.user1.username})]
         for key, value in list_data.items():
             for reverse_name in list_views:
-                with self.subTest(reverse_name=reverse_name):
+                with self.subTest(reverse_name=reverse_name, value=value):
                     response = self.guest_client.get(reverse_name + value)
                     self.assertEqual(len(response.context['page_obj']), key)
 
@@ -283,50 +285,64 @@ class CommentTest(TestCase):
         self.assertEqual(comment_object.text, form_data['text'])
 
 
-class FollowTest(TestCase):
+class FollowViewsTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='USER')
-        cls.author = User.objects.create_user(username='AUTHOR')
-        cls.post = Post.objects.create(
-            author=cls.author,
-            text='Тестовый пост подписок'
+        cls.author = User.objects.create(username='author')
+        cls.follower = User.objects.create(username='follower')
+
+        cls.guest_client = Client()
+        cls.authorized_client = Client()
+        cls.authorized_client.force_login(cls.follower)
+
+        cache.clear()
+
+    def test_follow_author(self):
+        follow_count = Follow.objects.count()
+        self.authorized_client.post(
+            reverse(
+                'posts:profile_follow',
+                kwargs={'username': self.author}))
+        follow = Follow.objects.all().latest('id')
+        self.assertEqual(Follow.objects.count(), follow_count + 1)
+        self.assertEqual(follow.author.id, self.author.id)
+        self.assertEqual(follow.user.id, self.follower.id)
+        response = self.guest_client.post(reverse(
+            'posts:profile_follow', kwargs={'username': self.author})
+        )
+        self.assertEqual(response.status_code, HTTPStatus.FOUND)
+        self.assertRedirects(
+            response, f'/auth/login/?next=/profile/{self.author}/follow/'
         )
 
-    def setUp(self):
-        self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
-        self.follow_count = Follow.objects.count()
+    def test_unfollow_author(self):
+        Follow.objects.create(
+            user=self.follower,
+            author=self.author
+        )
+        follow_count = Follow.objects.count()
+        self.authorized_client.post(
+            reverse(
+                'posts:profile_unfollow',
+                kwargs={'username': self.author}))
+        self.assertEqual(Follow.objects.count(), follow_count - 1)
 
-    def test_follow(self):
-        response_follow = self.authorized_client.get(
-            reverse('posts:profile_follow',
-                    kwargs={'username': self.author.username}
-                    ))
-        self.assertRedirects(
-            response_follow,
-            reverse('posts:profile',
-                    kwargs={'username': self.author.username}))
-        self.assertEqual(Follow.objects.count(), self.follow_count + 1)
-
-        response_post = self.authorized_client.get(
+    def test_authors_post_in_user_page(self):
+        post = Post.objects.create(
+            author=self.author,
+            text="тестовый пост")
+        Follow.objects.create(
+            user=self.follower,
+            author=self.author)
+        response = self.authorized_client.get(
             reverse('posts:follow_index'))
-        post_object = response_post.context['page_obj']
-        self.assertIn(self.post, post_object)
-        self.assertEqual(post_object[0].author.username, self.author.username)
-        self.assertEqual(post_object[0].text, self.post.text)
+        self.assertIn(post, response.context['page_obj'].object_list)
 
-    def test_unfollow(self):
-        response_unfollow = self.authorized_client.get(
-            reverse('posts:profile_unfollow',
-                    kwargs={'username': self.author.username}))
-        self.assertRedirects(
-            response_unfollow,
-            reverse('posts:profile',
-                    kwargs={'username': self.author.username}))
-        self.assertEqual(Follow.objects.count(), self.follow_count)
-        response_post = self.authorized_client.get(
+    def test_authors_post_not_in_not_followers_page(self):
+        post = Post.objects.create(
+            author=self.author,
+            text="тестовый пост")
+        response = self.authorized_client.get(
             reverse('posts:follow_index'))
-        post_object = response_post.context['page_obj']
-        self.assertNotIn(self.post, post_object)
+        self.assertNotIn(post, response.context['page_obj'].object_list)
