@@ -1,4 +1,3 @@
-from http import HTTPStatus
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -192,8 +191,8 @@ class PaginatorViewsTest(TestCase):
         На 2 страницу выводится 3 поста
         """
         list_data = {
-            10: '',
-            3: '?page=2',
+            10: '1',
+            3: '2',
         }
         list_views = [
             reverse('posts:index'),
@@ -201,10 +200,12 @@ class PaginatorViewsTest(TestCase):
                     kwargs={'slug': self.group.slug}),
             reverse('posts:profile',
                     kwargs={'username': self.user1.username})]
-        for key, value in list_data.items():
+        for key, page in list_data.items():
             for reverse_name in list_views:
-                with self.subTest(reverse_name=reverse_name, value=value):
-                    response = self.guest_client.get(reverse_name + value)
+                with self.subTest(reverse_name=reverse_name, page=page):
+                    response = self.guest_client.get(
+                        f'{reverse_name}?page={page}'
+                    )
                     self.assertEqual(len(response.context['page_obj']), key)
 
 
@@ -299,34 +300,28 @@ class FollowViewsTest(TestCase):
         cache.clear()
 
     def test_follow_author(self):
-        follow_count = Follow.objects.count()
         self.authorized_client.post(
             reverse(
                 'posts:profile_follow',
                 kwargs={'username': self.author}))
         follow = Follow.objects.all().latest('id')
-        self.assertEqual(Follow.objects.count(), follow_count + 1)
-        self.assertEqual(follow.author.id, self.author.id)
-        self.assertEqual(follow.user.id, self.follower.id)
-        response = self.guest_client.post(reverse(
-            'posts:profile_follow', kwargs={'username': self.author})
-        )
-        self.assertEqual(response.status_code, HTTPStatus.FOUND)
-        self.assertRedirects(
-            response, f'/auth/login/?next=/profile/{self.author}/follow/'
-        )
+
+        self.assertEqual(follow.author, self.author)
+        self.assertEqual(follow.user, self.follower)
 
     def test_unfollow_author(self):
-        Follow.objects.create(
+        self.follow = Follow.objects.create(
             user=self.follower,
             author=self.author
         )
-        follow_count = Follow.objects.count()
         self.authorized_client.post(
             reverse(
                 'posts:profile_unfollow',
                 kwargs={'username': self.author}))
-        self.assertEqual(Follow.objects.count(), follow_count - 1)
+        self.assertFalse(Follow.objects.filter(
+            user=self.follow.user,
+            author=self.follow.author
+        ).exists())
 
     def test_authors_post_in_user_page(self):
         post = Post.objects.create(

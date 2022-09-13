@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from django.contrib.auth import get_user_model
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -66,15 +67,34 @@ class StaticURLTests(TestCase):
             response,
             reverse('users:login') + "?next=" + '/create/')
 
-    def test_task_profile_follow_redirect_anonymous_on_admin_login(self):
-        response = self.guest_client.post(reverse(
-            'posts:profile_follow', kwargs={'username': self.post.author})
+    def test_task_add_comment_url_redirect_anonymous_on_admin_login(self):
+        response = self.guest_client.get(
+            f'/posts/{self.post.pk}/comment/',
+            follow=True
         )
         self.assertRedirects(
             response,
             reverse('users:login')
-            + "?next=" + f'/profile/{self.post.author}/follow/'
+            + "?next=" + f'/posts/{self.post.pk}/comment/'
         )
+
+    def test_task_profile_follow_redirect_anonymous_on_admin_login(self):
+        list_views = [
+            reverse('posts:profile_follow',
+                    kwargs={'username': self.post.author}),
+            reverse('posts:profile_unfollow',
+                    kwargs={'username': self.post.author})
+        ]
+
+        for reverse_name in list_views:
+            with self.subTest(reverse_name=reverse_name):
+                response = self.guest_client.post(reverse_name)
+                self.assertEqual(response.status_code, HTTPStatus.FOUND)
+                self.assertRedirects(
+                    response,
+                    reverse('users:login')
+                    + "?next=" + reverse_name
+                )
 
     def test_unknown_puth_return_404(self):
         response = self.guest_client.get('/unexisting_page/')
