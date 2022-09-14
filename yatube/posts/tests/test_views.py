@@ -297,6 +297,7 @@ class FollowViewsTest(TestCase):
         cls.authorized_client = Client()
         cls.authorized_client.force_login(cls.follower)
 
+    def setUp(self):
         cache.clear()
 
     def test_follow_author(self):

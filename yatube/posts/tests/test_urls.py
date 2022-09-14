@@ -80,10 +80,8 @@ class StaticURLTests(TestCase):
 
     def test_task_profile_follow_redirect_anonymous_on_admin_login(self):
         list_views = [
-            reverse('posts:profile_follow',
-                    kwargs={'username': self.post.author}),
-            reverse('posts:profile_unfollow',
-                    kwargs={'username': self.post.author})
+            f'/profile/{self.user.username}/follow/',
+            f'/profile/{self.user.username}/unfollow/'
         ]
 
         for reverse_name in list_views:
